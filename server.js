@@ -42,13 +42,13 @@ fetch("https://api-dev.fareportallabs.com/air/api/search/searchflightavailabilit
                           "TypeOfTrip": "ROUNDTRIP",
                           "SegmentDetails": [
                                                   {
-                                                  "DepartureDate": "2019-01-25",
+                                                  "DepartureDate": "2018-07-26",
                                                   "DepartureTime": "1100",
                                                   "Destination": "NYC",
                                                   "Origin": "LON"
                                                   },
                                                   {
-                                                  "DepartureDate": "2019-02-04",
+                                                  "DepartureDate": "2018-07-30",
                                                   "DepartureTime": "1100",
                                                   "Destination": "LON",
                                                   "Origin": "NYC"
@@ -56,17 +56,7 @@ fetch("https://api-dev.fareportallabs.com/air/api/search/searchflightavailabilit
                                               ]
                                           }
                           })
-  }).then(function(res) {
-    if (res.ok) {
-      console.log(res);
-    } else if (res.status == 401) {
-      console.log("authorization failed");
-    } else {
-      console.log(res.status);
-    }
-  }, function(e) {
-    console.log("error");
-  });
+  }).then(res => res.json()).then(json => console.log(JSON.stringify(json, null, 2)))
 
 // TODO devise some type of index
 // returns weighted price that takes the duration into consideration
