@@ -6,6 +6,8 @@ var cityList = { "WAS":0, "LON":3 , "PAR":2 , "BER":4 };
 var startDate = new Date("12-12-2018");
 // optimal path
 var optimalPath = { "path":[], "price":Number.MAX_SAFE_INTEGER };
+// saved flight searches
+var savedFlights = {};
 
 var express = require('express')
 var app = express()
@@ -22,9 +24,9 @@ function weightedCost() {
 }
 
 // TODO API call
-// returns cheapest price and time from JSON from FPLab Extreme Search Flight API
+// returns cheapest price JSON from FPLab Extreme Search Flight API
 function getFlightData( start, end, date ) {
-  return { "price" : 0, "time" : 1};
+  return { "Total Fare":0, "time":1 };
 }
 
 // get new date
@@ -38,12 +40,19 @@ function calculateTripCost( itinerary, currMinCost ) {
   var date = startDate;
   var tripCost = 0;
   for ( var i = 0; i < itinerary.length - 1; i++ ) {
+    // fetch date of next flight in itinerary
     date = nextDate( date, cityList[itinerary[i]] )
-    var flightData = getFlightData( itinerary[i], itinerary[i+1], date );
-    tripCost += flightData["price"];
-    console.log(itinerary[i]);
-    console.log(date);
+    
+    // check to see if flight already searched for
+    var key = itinerary[i] + "_" + itinerary[i+1] + "_" + date.toString();
+    var flightData = ( key in savedFlights ) ? savedFlights[key] : getFlightData( itinerary[i], itinerary[i+1], date );
+    
+    // save flight search
+    if ( !(key in savedFlights) ) savedFlights[key] = flightData;
+    
+    tripCost += flightData["Total Fare"];
 
+    // stop if trip cost exceeds current trip cost
     if ( tripCost > currMinCost ) return currMinCost;
   }
 
@@ -54,10 +63,12 @@ function calculateTripCost( itinerary, currMinCost ) {
 // return optimal permutation
 function permute( list, l, r ) {
   if ( l == r ) {
+    // append start and end to itinerary
     var itinerary = list.slice();
     itinerary.push( startingCity );
     itinerary.unshift( startingCity );
     console.log(itinerary);
+
     var thisTripCost = calculateTripCost( itinerary, optimalPath["price"] );
     if ( thisTripCost != optimalPath["price"] ) {
       optimalPath["path"] = itinerary;
@@ -75,6 +86,5 @@ function permute( list, l, r ) {
   }
 }
 
-var cities = [ "LON", "PAR", "BER" ];
-//permute( cities, 0, cities.length - 1);
-//console.log(optimalPath);
+var cities = [ 'LON', 'PAR', 'BER' ];
+permute( cities, 0, cities.length-1 );
