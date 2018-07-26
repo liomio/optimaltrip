@@ -27,7 +27,7 @@ app.use('/test', test)
 
 // TODO devise some type of index
 // returns weighted price that takes the duration into consideration
-function weightedCost() {
+function weightedCost(flight) {
   return 0;
 }
 
@@ -60,6 +60,7 @@ function getFlightData(start, end, date) {
 
 // parse JSON and return best flight
 function parseFlightData(json) {
+  // data contains the different flights sorted by flight id
   var data = {};  
   
   var flightDetails = json.FlightResponse.FpSearch_AirLowFaresRS.OriginDestinationOptions.OutBoundOptions.OutBoundOption;
@@ -67,7 +68,6 @@ function parseFlightData(json) {
     data[obj.Segmentid] = {SegmentDetails:obj.FlightSegment};
   }
   
-  var x = 0;
   var priceAndDetails = json.FlightResponse.FpSearch_AirLowFaresRS.SegmentReference.RefDetails;
   for (var obj of priceAndDetails) {
     var id = obj.OutBoundOptionId[0];
@@ -76,7 +76,18 @@ function parseFlightData(json) {
     tempObj.priceDetails = obj.PTC_FareBreakdown;
     data[id] = tempObj;
   }
-  return data;
+  
+  // go through data and return best flight
+  // will replace price with weightedPrice()
+  var bestFlight = {flightId:'', flightPrice:Number.MAX_SAFE_INTEGER};
+  for (var flight in data) {
+    var price = data[flight].priceDetails.Adult.TotalAdultFare;
+    if (price < bestFlight.flightPrice) {
+      bestFlight.flightId = flight;
+      bestFlight.flightPrice = price;
+    }
+  }
+  return bestFlight;
 }
 
 // format date to YYYY-MM-DD
@@ -111,13 +122,16 @@ async function calculateTripCost(itinerary, currMinCost) {
     var flightData = (key in savedFlights) ? savedFlights[key] : -1;
 
     // if not, call API
-    if (flightData == -1) flightData = await getFlightData( itinerary[i], itinerary[i+1], date);
+    if (flightData == -1) {
+      var apiData = await getFlightData(itinerary[i], itinerary[i+1], date);
+      flightData = await parseFlightData(apiData);
+    }
+
 
     // save flight search
     if (!(key in savedFlights)) savedFlights[key] = flightData;
 
-    tripCost += flightData["Total Fare"];
-
+    tripCost += flightData.flightPrice;
     // stop if trip cost exceeds current trip cost
     if (tripCost > currMinCost) return currMinCost;
   }
@@ -136,6 +150,7 @@ async function permute(list, l, r) {
     console.log(itinerary);
 
     var thisTripCost = await calculateTripCost(itinerary, optimalPath["price"]);
+    console.log(thisTripCost);
     if (thisTripCost != optimalPath["price"]) {
       optimalPath["path"] = itinerary;
       optimalPath["price"] = thisTripCost;
@@ -152,15 +167,10 @@ async function permute(list, l, r) {
   }
 }
 
-var cities = [ 'LON', 'PAR', 'BER' ];
-//permute( cities, 0, cities.length-1 );
-//calculateTripCost(cities, 1000).then(function(result) {
-  //console.log(result);
-//})
-
-//ipc scl
-getFlightData('IAD', 'NCE', '08-15-2018').then(function(result) {
-  parseFlightData(result);
+var cities = ['LON', 'PAR', 'BER'];
+permute(cities, 0, cities.length-1).then(function() {
+  console.log("Yes");
 })
+
 
 module.exports = router;
