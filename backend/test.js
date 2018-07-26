@@ -6,6 +6,4 @@ router.get('/test', function (req, res) {
   res.send('TEST PAGE');
 })
 
-module.exports = router;
-
-
+module.exports = router; 

@@ -31,7 +31,6 @@ function weightedCost() {
   return 0;
 }
 
-// TODO API call
 // returns cheapest price JSON from FPLab Extreme Search Flight API
 function getFlightData(start, end, date) {
   return fetch("https://api-dev.fareportallabs.com/air/api/search/searchflightavailability", {
@@ -58,10 +57,26 @@ function getFlightData(start, end, date) {
     })
   }).then(res => res.json())
 }
-// TODO devise some type of index
-// returns weighted price that takes the duration into consideration
-function weightedCost() {
-  return 0;
+
+// parse JSON and return best flight
+function parseFlightData(json) {
+  var data = {};  
+  
+  var flightDetails = json.FlightResponse.FpSearch_AirLowFaresRS.OriginDestinationOptions.OutBoundOptions.OutBoundOption;
+  for (var obj of flightDetails) {
+    data[obj.Segmentid] = {SegmentDetails:obj.FlightSegment};
+  }
+  
+  var x = 0;
+  var priceAndDetails = json.FlightResponse.FpSearch_AirLowFaresRS.SegmentReference.RefDetails;
+  for (var obj of priceAndDetails) {
+    var id = obj.OutBoundOptionId[0];
+    var tempObj = data[id];
+    tempObj.randomDetails = obj.CNT;
+    tempObj.priceDetails = obj.PTC_FareBreakdown;
+    data[id] = tempObj;
+  }
+  return data;
 }
 
 // format date to YYYY-MM-DD
@@ -93,27 +108,16 @@ async function calculateTripCost(itinerary, currMinCost) {
 
     // check to see if flight already searched for
     var key = itinerary[i] + "_" + itinerary[i+1] + "_" + date.toString();
-    var x = await getFlightData( itinerary[i], itinerary[i+1], date);
-    var flightData = (key in savedFlights ) ? savedFlights[key] : x;
+    var flightData = (key in savedFlights) ? savedFlights[key] : -1;
+
+    // if not, call API
+    if (flightData == -1) flightData = await getFlightData( itinerary[i], itinerary[i+1], date);
 
     // save flight search
     if (!(key in savedFlights)) savedFlights[key] = flightData;
 
     tripCost += flightData["Total Fare"];
-    var flightData = (key in savedFlights ) ? savedFlights[key] : -1;
-    
-    // get flight data from API call
-    if (flightData == -1) {
-      getFlightData(itinerary[i], itinerary[i+1], date).then(function(result) {
-        flightData = result;
-      })
-    }
 
-    // save flight search
-    if (!(key in savedFlights)) savedFlights[key] = flightData;
-    
-    tripCost += 0;    
-    //tripCost += flightData["Total Fare"];
     // stop if trip cost exceeds current trip cost
     if (tripCost > currMinCost) return currMinCost;
   }
@@ -123,7 +127,7 @@ async function calculateTripCost(itinerary, currMinCost) {
 
 // generate all permutations of cities list
 // return optimal permutation
-function permute(list, l, r) {
+async function permute(list, l, r) {
   if (l == r) {
     // append start and end to itinerary
     var itinerary = list.slice();
@@ -131,7 +135,7 @@ function permute(list, l, r) {
     itinerary.unshift(startingCity);
     console.log(itinerary);
 
-    var thisTripCost = calculateTripCost(itinerary, optimalPath["price"]);
+    var thisTripCost = await calculateTripCost(itinerary, optimalPath["price"]);
     if (thisTripCost != optimalPath["price"]) {
       optimalPath["path"] = itinerary;
       optimalPath["price"] = thisTripCost;
@@ -148,16 +152,15 @@ function permute(list, l, r) {
   }
 }
 
-var totalCount = 0;
-var factCount = 0;
 var cities = [ 'LON', 'PAR', 'BER' ];
-permute( cities, 0, cities.length-1 );
-console.log(totalCount);
-console.log(factCount);
-
-//var out = getFlightData('WAS', 'LON', '10-10-2018');
-//out.then(function(result) {
+//permute( cities, 0, cities.length-1 );
+//calculateTripCost(cities, 1000).then(function(result) {
   //console.log(result);
 //})
+
+//ipc scl
+getFlightData('IAD', 'NCE', '08-15-2018').then(function(result) {
+  parseFlightData(result);
+})
 
 module.exports = router;
