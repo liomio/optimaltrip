@@ -1,7 +1,7 @@
 // reference to starting city IATA format
 var startingCity = "WAS";
 // list of cities IATA format with durations
-var cityList = { "WAS":0, "LON":3 , "PAR":2 , "BER":4 };
+var cityList = { "WAS":0, "LON":3 , "PAR":2 , "BER":4, "MOW":2 };
 // starting date
 var startDate = new Date("12-12-2018");
 // optimal path
@@ -30,42 +30,38 @@ function weightedCost() {
   return 0;
 }
 
-
 // TODO API call
 // returns cheapest price JSON from FPLab Extreme Search Flight API
 function getFlightData(start, end, date) {
-  fetch("https://api-dev.fareportallabs.com/air/api/search/searchflightavailability", {
-  method: "POST",
-  headers: {
-    "Authorization":"Basic " + creds,
-    "Content-Type":"application/json"
-  },
-  body: JSON.stringify({
-                      "ResponseVersion": "VERSION41",
-                      "FlightSearchRequest": {
-                          "Adults": "1",
-                          "ClassOfService": "ECONOMY",
-                          "TypeOfTrip": "ONEWAYTRIP",
-                          "SegmentDetails": [
-                                                  {
-                                                  "DepartureDate": formatDate(date),
-                                                  "DepartureTime": "1100",
-                                                  "Destination": end,
-                                                  "Origin": start
-                                                  }
-                                              ]
-                                          }
-                          })
-  }).then(res => res.json()).then(json => console.log(JSON.stringify(json, null, 2)))
+  return fetch("https://api-dev.fareportallabs.com/air/api/search/searchflightavailability", {
+    method: "POST",
+    headers: {
+      "Authorization":"Basic " + creds,
+      "Content-Type":"application/json"
+    },
+    body: JSON.stringify({
+                        "ResponseVersion": "VERSION41",
+                        "FlightSearchRequest": {
+                            "Adults": "1",
+                            "ClassOfService": "ECONOMY",
+                            "TypeOfTrip": "ONEWAYTRIP",
+                            "SegmentDetails": [
+                                                    {
+                                                    "DepartureDate": formatDate(date),
+                                                    "DepartureTime": "1100",
+                                                    "Destination": end,
+                                                    "Origin": start
+                                                    }
+                                                ]
+                                            }
+                            })
+  }).then((res) => res.json())
 }
+
+// test
 router.get('/test', function(req, res, next) {
     res.send('HELLO')
 })
-// TODO devise some type of index
-// returns weighted price that takes the duration into consideration
-function weightedCost() {
-  return 0;
-}
 
 // format date to YYYY-MM-DD
 function formatDate(date) {
@@ -96,12 +92,20 @@ function calculateTripCost(itinerary, currMinCost) {
     
     // check to see if flight already searched for
     var key = itinerary[i] + "_" + itinerary[i+1] + "_" + date.toString();
-    var flightData = (key in savedFlights ) ? savedFlights[key] : getFlightData( itinerary[i], itinerary[i+1], date);
+    var flightData = (key in savedFlights ) ? savedFlights[key] : -1;
     
+    // get flight data from API call
+    if (flightData == -1) {
+      getFlightData(itinerary[i], itinerary[i+1], date).then(function(result) {
+        flightData = result;
+      })
+    }
+
     // save flight search
     if (!(key in savedFlights)) savedFlights[key] = flightData;
     
-    tripCost += flightData["Total Fare"];
+    tripCost += 0;    
+    //tripCost += flightData["Total Fare"];
 
     // stop if trip cost exceeds current trip cost
     if (tripCost > currMinCost) return currMinCost;
@@ -137,7 +141,16 @@ function permute(list, l, r) {
   }
 }
 
+var totalCount = 0;
+var factCount = 0;
 var cities = [ 'LON', 'PAR', 'BER' ];
 permute( cities, 0, cities.length-1 );
+console.log(totalCount);
+console.log(factCount);
+
+//var out = getFlightData('WAS', 'LON', '10-10-2018');
+//out.then(function(result) {
+  //console.log(result);
+//})
 
 module.exports = router;
