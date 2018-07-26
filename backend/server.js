@@ -22,7 +22,8 @@ var fetch = require('node-fetch')
 var express = require('express')
 var router = express.Router()
 var app = express()
-
+var test = require('./test.js')
+app.use('/test', test)
 
 // TODO devise some type of index
 // returns weighted price that takes the duration into consideration
@@ -34,33 +35,30 @@ function weightedCost() {
 // TODO API call
 // returns cheapest price JSON from FPLab Extreme Search Flight API
 function getFlightData(start, end, date) {
-  fetch("https://api-dev.fareportallabs.com/air/api/search/searchflightavailability", {
-  method: "POST",
-  headers: {
-    "Authorization":"Basic " + creds,
-    "Content-Type":"application/json"
-  },
-  body: JSON.stringify({
-                      "ResponseVersion": "VERSION41",
-                      "FlightSearchRequest": {
-                          "Adults": "1",
-                          "ClassOfService": "ECONOMY",
-                          "TypeOfTrip": "ONEWAYTRIP",
-                          "SegmentDetails": [
-                                                  {
-                                                  "DepartureDate": formatDate(date),
-                                                  "DepartureTime": "1100",
-                                                  "Destination": end,
-                                                  "Origin": start
-                                                  }
-                                              ]
-                                          }
-                          })
-  }).then(res => res.json()).then(json => console.log(JSON.stringify(json, null, 2)))
+  return fetch("https://api-dev.fareportallabs.com/air/api/search/searchflightavailability", {
+    method: "POST",
+    headers: {
+      "Authorization":"Basic " + creds,
+      "Content-Type":"application/json"
+    },
+    body: JSON.stringify({
+      "ResponseVersion": "VERSION41",
+      "FlightSearchRequest": {
+        "Adults": "1",
+        "ClassOfService": "ECONOMY",
+        "TypeOfTrip": "ONEWAYTRIP",
+        "SegmentDetails": [
+          {
+            "DepartureDate": formatDate(date),
+            "DepartureTime": "1100",
+            "Destination": end,
+            "Origin": start
+          }
+        ]
+      }
+    })
+  }).then(res => res.json())
 }
-router.get('/test', function(req, res, next) {
-    res.send('HELLO')
-})
 // TODO devise some type of index
 // returns weighted price that takes the duration into consideration
 function weightedCost() {
@@ -87,20 +85,21 @@ function nextDate(oldDate, days) {
 }
 
 // calculates cost for an itinerary
-function calculateTripCost(itinerary, currMinCost) {
+async function calculateTripCost(itinerary, currMinCost) {
   var date = startDate;
   var tripCost = 0;
   for (var i = 0; i < itinerary.length - 1; i++) {
     // fetch date of next flight in itinerary
     date = nextDate(date, cityList[itinerary[i]])
-    
+
     // check to see if flight already searched for
     var key = itinerary[i] + "_" + itinerary[i+1] + "_" + date.toString();
-    var flightData = (key in savedFlights ) ? savedFlights[key] : getFlightData( itinerary[i], itinerary[i+1], date);
-    
+    var x = await getFlightData( itinerary[i], itinerary[i+1], date);
+    var flightData = (key in savedFlights ) ? savedFlights[key] : x;
+
     // save flight search
     if (!(key in savedFlights)) savedFlights[key] = flightData;
-    
+
     tripCost += flightData["Total Fare"];
 
     // stop if trip cost exceeds current trip cost
