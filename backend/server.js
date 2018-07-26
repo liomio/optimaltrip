@@ -1,7 +1,7 @@
 // reference to starting city IATA format
 var startingCity = "WAS";
 // list of cities IATA format with durations
-var cityList = { "WAS":0, "LON":3 , "PAR":2 , "BER":4 };
+var cityList = { "WAS":0, "LON":3 , "PAR":2 , "BER":4, "MOW":2 };
 // starting date
 var startDate = new Date("12-12-2018");
 // optimal path
@@ -30,7 +30,6 @@ app.use('/test', test)
 function weightedCost() {
   return 0;
 }
-
 
 // TODO API call
 // returns cheapest price JSON from FPLab Extreme Search Flight API
@@ -101,7 +100,20 @@ async function calculateTripCost(itinerary, currMinCost) {
     if (!(key in savedFlights)) savedFlights[key] = flightData;
 
     tripCost += flightData["Total Fare"];
+    var flightData = (key in savedFlights ) ? savedFlights[key] : -1;
+    
+    // get flight data from API call
+    if (flightData == -1) {
+      getFlightData(itinerary[i], itinerary[i+1], date).then(function(result) {
+        flightData = result;
+      })
+    }
 
+    // save flight search
+    if (!(key in savedFlights)) savedFlights[key] = flightData;
+    
+    tripCost += 0;    
+    //tripCost += flightData["Total Fare"];
     // stop if trip cost exceeds current trip cost
     if (tripCost > currMinCost) return currMinCost;
   }
@@ -136,7 +148,16 @@ function permute(list, l, r) {
   }
 }
 
+var totalCount = 0;
+var factCount = 0;
 var cities = [ 'LON', 'PAR', 'BER' ];
 permute( cities, 0, cities.length-1 );
+console.log(totalCount);
+console.log(factCount);
+
+//var out = getFlightData('WAS', 'LON', '10-10-2018');
+//out.then(function(result) {
+  //console.log(result);
+//})
 
 module.exports = router;
