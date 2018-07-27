@@ -4,7 +4,7 @@ import json
 iata_codes = []
 with open('airport-codes.csv') as f:
     reader = csv.DictReader(f)
-    iata_codes = [r for r in reader if (r['type'] == 'large_airport' or r['type'] == 'medium_airport')]
+    iata_codes = [r for r in reader if (r['type'] == 'large_airport')]
     print(iata_codes)
 
 with open('codes.json', 'w') as out:
@@ -13,14 +13,15 @@ with open('codes.json', 'w') as out:
 dropdown_options = []
 with open('dropdownOptions.json', 'w') as out:
     for airport in iata_codes:
-        code = airport['local_code']
-        name = airport['name']
-        location = airport['municipality']
-        text = name + ' (' + code + ') - ' + location
-        option = {}
-        option['key'] = text
-        option['text'] = text
-        option['value'] = airport
-        dropdown_options.append(option)
+        if(airport['iata_code'] != ''):
+            code = airport['iata_code']
+            name = airport['name']
+            location = airport['municipality']
+            text = name + ' (' + code + ') - ' + location
+            option = {}
+            option['key'] = text
+            option['text'] = text
+            option['value'] = airport
+            dropdown_options.append(option)
     json.dump(dropdown_options, out, indent=2)
     

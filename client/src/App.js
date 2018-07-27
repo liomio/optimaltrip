@@ -1,7 +1,7 @@
 import React, { Component } from 'react';
 import logo from './logo.svg';
-import './App.css';
-import { Container } from 'semantic-ui-react'
+//import './App.css';
+import { Container, Header } from 'semantic-ui-react'
 import MainForm from './MainForm.js'
 
 class App extends Component {
@@ -13,7 +13,9 @@ class App extends Component {
     render() {
         return (
             <Container className="App">
-                <h1>Users</h1>
+                <Container>
+                    <Header>NT Flights </Header>
+                </Container>
                 <MainForm />
             </Container>
         );
