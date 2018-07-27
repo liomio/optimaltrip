@@ -229,6 +229,7 @@ async function processInput(requestJSON) {
     count++;
   }
   
+  
   // check for no itinerary
   if (cheapest == Number.MAX_SAFE_INTEGER) return "No itinerary exists!";
   
