@@ -6021,6 +6021,10 @@ selfsigned@^1.9.1:
   dependencies:
     node-forge "0.7.5"
 
+semantic-ui-react-numberpicker@^0.0.1-b:
+  version "0.0.1-b"
+  resolved "https://registry.yarnpkg.com/semantic-ui-react-numberpicker/-/semantic-ui-react-numberpicker-0.0.1-b.tgz#21c3e9217cbeb6ae8368ef82475ecb7c728d4c25"
+
 semantic-ui-react@^0.82.1:
   version "0.82.1"
   resolved "https://registry.yarnpkg.com/semantic-ui-react/-/semantic-ui-react-0.82.1.tgz#fa779a20bad064ca7b333bc719dae120b795f740"
