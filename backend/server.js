@@ -1,13 +1,14 @@
-// reference to starting city IATA format
-var startingCity = "WAS";
-// list of cities IATA format with durations
-var cityList = { "WAS":0, "LON":3 , "PAR":2 , "BER":4, "MOW":2 };
-// starting date
-var startDate = new Date("12-12-2018");
-// optimal path
-var optimalPath = { "path":[], "price":Number.MAX_SAFE_INTEGER };
-// saved flight searches
-var savedFlights = {};
+// sample frontend JSON request
+var requestJSON = {
+  startingCity:"LAX",
+  cityList:{
+    "NRT":5,
+    "ICN":5,
+    "HKG":5
+  },
+  startDate:"11-23-2018"
+}
+
 var path = require('path')
 
 // Flight API authentication
@@ -63,11 +64,14 @@ function parseFlightData(json) {
   // data contains the different flights sorted by flight id
   var data = {};  
   
+  // check if no flights
+  if (json.FlightResponse.FpSearch_AirLowFaresRS == null) return {flightId:'', flightPrice:Number.MAX_SAFE_INTEGER};
+  
+  // sort json data by flight id
   var flightDetails = json.FlightResponse.FpSearch_AirLowFaresRS.OriginDestinationOptions.OutBoundOptions.OutBoundOption;
   for (var obj of flightDetails) {
     data[obj.Segmentid] = {SegmentDetails:obj.FlightSegment};
   }
-  
   var priceAndDetails = json.FlightResponse.FpSearch_AirLowFaresRS.SegmentReference.RefDetails;
   for (var obj of priceAndDetails) {
     var id = obj.OutBoundOptionId[0];
@@ -87,6 +91,7 @@ function parseFlightData(json) {
       bestFlight.flightPrice = price;
     }
   }
+  
   return bestFlight;
 }
 
@@ -110,8 +115,8 @@ function nextDate(oldDate, days) {
 }
 
 // calculates cost for an itinerary
-async function calculateTripCost(itinerary, currMinCost) {
-  var date = startDate;
+async function calculateTripCost(itinerary, currMinCost, startDate, cityList, savedFlights) {
+  var date = new Date(startDate);
   var tripCost = 0;
   for (var i = 0; i < itinerary.length - 1; i++) {
     // fetch date of next flight in itinerary
@@ -127,49 +132,114 @@ async function calculateTripCost(itinerary, currMinCost) {
       flightData = await parseFlightData(apiData);
     }
 
-
     // save flight search
     if (!(key in savedFlights)) savedFlights[key] = flightData;
 
     tripCost += flightData.flightPrice;
+    console.log(key);
+    console.log(Number(tripCost).toFixed(2));
+    
     // stop if trip cost exceeds current trip cost
-    if (tripCost > currMinCost) return currMinCost;
+    if (tripCost >= currMinCost) return currMinCost;
   }
 
-  return tripCost;
+  return Number(tripCost).toFixed(2);
 }
 
 // generate all permutations of cities list
 // return optimal permutation
-async function permute(list, l, r) {
+function permute(list, l, r, permutationsList, startingCity) {
   if (l == r) {
     // append start and end to itinerary
     var itinerary = list.slice();
     itinerary.push(startingCity);
     itinerary.unshift(startingCity);
-    console.log(itinerary);
-
-    var thisTripCost = await calculateTripCost(itinerary, optimalPath["price"]);
-    console.log(thisTripCost);
-    if (thisTripCost != optimalPath["price"]) {
-      optimalPath["path"] = itinerary;
-      optimalPath["price"] = thisTripCost;
-    }
+    
+    // add itinerary
+    permutationsList.push(itinerary);
   } else {
     for (var i = l; i < r + 1; i++) {
       var temp = list[l];
       list[l] = list[i];
       list[i] = temp;
-      permute(list, l + 1, r);
+      permute(list, l + 1, r, permutationsList, startingCity);
       list[i] = list[l];
       list[l] = temp;
     }
   }
 }
 
-var cities = ['LON', 'PAR', 'BER'];
-permute(cities, 0, cities.length-1).then(function() {
-  console.log("Yes");
+// run in parallel
+// compare itineraries
+async function checkItineraries(permutations, startDate, cityList, savedFlights) {
+  const promises = permutations.map(itinerary => { return calculateTripCost(itinerary, Number.MAX_SAFE_INTEGER, startDate, cityList, savedFlights)});
+  
+  await Promise.all(promises);
+  
+  return promises;
+}
+
+// use checkItinerary instead
+// get optimal path from itineraries
+async function getOptimalPath(permutations, startDate, cityList, savedFlights) {
+  // optimal path
+  var optimalPath = { "path":[], "price":Number.MAX_SAFE_INTEGER };
+  
+  // enumerate through itineraries
+  for (var itinerary of permutations) {
+    console.log(itinerary);
+    var thisTripCost = await calculateTripCost(itinerary, optimalPath["price"], startDate, cityList, savedFlights);
+    if (thisTripCost != optimalPath["price"]) {
+      optimalPath["path"] = itinerary;
+      optimalPath["price"] = thisTripCost;
+    }
+  }
+  
+  return optimalPath;
+}
+
+async function processInput(requestJSON) {
+  // parse JSON
+  var startingCity = requestJSON.startingCity;
+  var cityList = requestJSON.cityList;
+  var cities = Object.keys(cityList);
+  var startDate = new Date(requestJSON.startDate);
+  
+  // generate permutations
+  var itineraries = [];
+  permute(cities, 0, cities.length-1, itineraries, startingCity);
+  
+  // get optimal path
+  var savedFlights = {};
+  cityList[startingCity] = 0;
+  //var result = await getOptimalPath(itineraries, startDate, cityList, savedFlights);
+  var prices = await checkItineraries(itineraries, startDate, cityList, savedFlights);
+  
+  // extract min
+  var cheapest = Number.MAX_SAFE_INTEGER;
+  var index = 0;
+  var count = 0;
+  for (const promise of prices) {
+    await promise.then(function(price) {
+      if (price < cheapest) {
+        cheapest = price;
+        index = count;
+      }
+    })
+    count++;
+  }
+  
+  // check for no itinerary
+  if (cheapest == Number.MAX_SAFE_INTEGER) return "No itinerary exists!";
+  
+  // match price with itinerary and return
+  var result = {Path:itineraries[index], Price:cheapest}
+  
+  return result;
+}
+
+processInput(requestJSON).then(function(result) {
+  console.log(result);
 })
 
 
