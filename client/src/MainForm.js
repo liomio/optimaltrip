@@ -2,6 +2,7 @@ import React, { Component } from 'react';
 import { Dropdown, Form, Container, Input } from 'semantic-ui-react'
 import codes from './codes.json'
 import dropdownOptions from './dropdownOptions.json'
+import Numberpicker from 'semantic-ui-react-numberpicker'
 
 class MainForm extends Component {
     constructor(props) {
@@ -33,7 +34,7 @@ class MainForm extends Component {
                 {
                     this.state.destinations.map(destination => 
                         (
-                            <Form.Field key={destination['iata_code']} inline>
+                            <Form.Field fluid='true' key={destination} inline>
                                 <label>{destination['name']}</label>
                                 <Input placeholder='Days' />
                             </Form.Field>
