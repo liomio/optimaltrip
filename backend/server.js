@@ -1,12 +1,13 @@
 // sample frontend JSON request
 var requestJSON = {
-  startingCity:"LAX",
+  startingCity:"SIN",
   cityList:{
-    "NRT":5,
-    "ICN":5,
-    "HKG":5
+    "CNX":2,
+    "BKK":4,
+    "SGN":4,
+    "HAN":3
   },
-  startDate:"11-23-2018"
+  startDate:"12-24-2018"
 }
 
 var path = require('path')
@@ -118,6 +119,8 @@ function nextDate(oldDate, days) {
 async function calculateTripCost(itinerary, currMinCost, startDate, cityList, savedFlights) {
   var date = new Date(startDate);
   var tripCost = 0;
+  // array to hold cache hits that havent been processed
+  var cacheHits = [];
   for (var i = 0; i < itinerary.length - 1; i++) {
     // fetch date of next flight in itinerary
     date = nextDate(date, cityList[itinerary[i]])
@@ -126,14 +129,22 @@ async function calculateTripCost(itinerary, currMinCost, startDate, cityList, sa
     var key = itinerary[i] + "_" + itinerary[i+1] + "_" + date.toString();
     var flightData = (key in savedFlights) ? savedFlights[key] : -1;
 
+    // if api call is currently being made, push to cache hits
+    if (flightData == -2) {
+      cacheHits.push(key);
+      continue;
+    }
+
     // if not, call API
     if (flightData == -1) {
+      // signal that api call is in progress
+      savedFlights[key] = -2;
       var apiData = await getFlightData(itinerary[i], itinerary[i+1], date);
       flightData = await parseFlightData(apiData);
     }
 
     // save flight search
-    if (!(key in savedFlights)) savedFlights[key] = flightData;
+    savedFlights[key] = flightData;
 
     tripCost += flightData.flightPrice;
     console.log(key);
@@ -142,8 +153,10 @@ async function calculateTripCost(itinerary, currMinCost, startDate, cityList, sa
     // stop if trip cost exceeds current trip cost
     if (tripCost >= currMinCost) return currMinCost;
   }
+    
+  if (cacheHits.length != 0) return {cost:tripCost, unprocessed:cacheHits}
 
-  return Number(tripCost).toFixed(2);
+  return Number(tripCost);
 }
 
 // generate all permutations of cities list
@@ -167,6 +180,26 @@ function permute(list, l, r, permutationsList, startingCity) {
       list[l] = temp;
     }
   }
+}
+
+// fisher-yates algorithm to shuffle array
+function shuffle(array) {
+  var currIndex = array.length, tempValue, randIndex;
+
+  // while there are elements to shuffle
+  while (0 !== currIndex) {
+
+    // pick remaining element
+    randIndex = Math.floor(Math.random() * currIndex);
+    currIndex -= 1;
+
+    // swap with current element
+    tempValue = array[currIndex];
+    array[currIndex] = array[randIndex];
+    array[randIndex] = tempValue;
+  }
+  
+  return array;
 }
 
 // run in parallel
@@ -209,6 +242,9 @@ async function processInput(requestJSON) {
   var itineraries = [];
   permute(cities, 0, cities.length-1, itineraries, startingCity);
   
+  // shuffle array to improve cache hits
+  itineraries = shuffle(itineraries);
+
   // get optimal path
   var savedFlights = {};
   cityList[startingCity] = 0;
@@ -220,21 +256,39 @@ async function processInput(requestJSON) {
   var index = 0;
   var count = 0;
   for (const promise of prices) {
-    await promise.then(function(price) {
-      if (price < cheapest) {
-        cheapest = price;
+    await promise.then(function(trip) {
+      // process cache hits from earlier here
+      if (typeof trip === 'object') {
+        tripCost = trip.cost;
+        cacheHits = trip.unprocessed;
+ 
+        // get flight info from cached flight data
+        for (var hit of cacheHits) {
+          tripCost += savedFlights[hit].flightPrice;
+          tripCost = Number(tripCost);
+          console.log(hit)
+          console.log(Number(tripCost).toFixed(2));
+          if (tripCost >= cheapest) break;
+        }
+
+        // check against current cheapest
+        if (tripCost < cheapest) {
+          cheapest = tripCost;
+          index = count;
+        }
+      } else if (trip < cheapest) {
+        cheapest = trip;
         index = count;
       }
     })
     count++;
   }
-  
-  
+   
   // check for no itinerary
   if (cheapest == Number.MAX_SAFE_INTEGER) return "No itinerary exists!";
   
   // match price with itinerary and return
-  var result = {Path:itineraries[index], Price:cheapest}
+  var result = {Path:itineraries[index], Price:Number(cheapest).toFixed(2)}
   
   return result;
 }
