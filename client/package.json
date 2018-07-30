@@ -5,10 +5,11 @@
   "dependencies": {
     "csv": "^3.1.0",
     "lodash": "^4.17.10",
-    "react": "^16.4.1",
-    "react-dom": "^16.4.1",
+    "prop-types": "^15.6.2",
+    "react": "^15.3.1",
+    "react-dom": "^15.3.1",
     "react-scripts": "1.1.4",
-    "semantic-ui-react": "^0.82.1",
+    "semantic-ui-react": "^0.54.3",
     "semantic-ui-react-numberpicker": "^0.0.1-b"
   },
   "scripts": {
