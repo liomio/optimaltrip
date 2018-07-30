@@ -1,8 +1,8 @@
 import React, { Component } from 'react';
 import { Dropdown, Form, Container, Input } from 'semantic-ui-react'
 import codes from './codes.json'
-import dropdownOptions from './dropdownOptions.js'
-import NumberPicker from 'semantic-ui-react-numberpicker'
+import dropdownOptions from './dropdownOptions.json'
+// import Numberpicker from 'semantic-ui-react-numberpicker'
 
 class MainForm extends Component {
   constructor(props) {
