@@ -5,16 +5,20 @@ import { Container, Header } from 'semantic-ui-react'
 import MainForm from './MainForm.js'
 
 class App extends Component {
-    state ={users: []}
+    constructor(props) {
+        super(props)
+        this.state = {
+        }
+    }
     componentDidMount() {
-        fetch('/test')
-            .then(res => console.log('BODY: ' + JSON.stringify(res.body, null, 2)))
+        fetch('/test').then(res => res.text()).then(json => this.setState({json}))
     }
     render() {
         return (
             <Container className="App">
                 <Container>
                     <Header>NT Flights </Header>
+                    { this.state.json }
                 </Container>
                 <MainForm />
             </Container>

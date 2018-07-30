@@ -2,10 +2,7 @@
 var requestJSON = {
   startingCity:"SIN",
   cityList:{
-    "CNX":2,
-    "BKK":4,
-    "SGN":4,
-    "HAN":3
+    "IAD":5
   },
   startDate:"12-24-2018"
 }
@@ -24,8 +21,6 @@ var fetch = require('node-fetch')
 var express = require('express')
 var router = express.Router()
 var app = express()
-var test = require('./test.js')
-app.use('/test', test)
 
 // TODO devise some type of index
 // returns weighted price that takes the duration into consideration
@@ -293,8 +288,11 @@ async function processInput(requestJSON) {
   return result;
 }
 
-processInput(requestJSON).then(function(result) {
-  console.log(result);
+router.get('/', function(req, res) {
+    processInput(requestJSON).then(function(result) {
+        console.log(result);
+      res.send(result);
+    })
 })
 
 
