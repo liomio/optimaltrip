@@ -1,15 +1,20 @@
 import React, { Component } from 'react';
-import { Dropdown, Form, Container, Input } from 'semantic-ui-react'
+import { Dropdown, Form, Container, Input, Button } from 'semantic-ui-react'
 import codes from './codes.json'
 import dropdownOptions from './dropdownOptions.json'
 // import Numberpicker from 'semantic-ui-react-numberpicker'
-
+import {
+  DateInput
+} from 'semantic-ui-calendar-react';
 class MainForm extends Component {
   constructor(props) {
     super(props)
     this.state = {
+      origin: '', 
       destinations: [],
-      options: dropdownOptions
+      options: dropdownOptions,
+      destAndDays: {},
+      date: ''
     }
   }
   componentDidMount() {
@@ -17,33 +22,79 @@ class MainForm extends Component {
   }
   updateDestinationState(e, data) {
     console.log(data)
+
     this.setState({
       destinations: data.value
     })
-    console.log(this.state.destinations)
+  }
+  handleDate(e, {name, value}) {
+    this.setState({
+      date: value
+    })
+  }
+  cleanDestinations() {
+    var clean = {}
+    var dests = this.state.destinations
+    for(var i = 0; i < dests.length; i++) {
+      var d = dests[i]
+      var code = d[0]
+      if(code in this.state.destAndDays) {
+        console.log(this.state.destAndDays[code])
+        clean[code] = this.state.destAndDays[code]
+      }
+    }
+    return clean
+  }
+  handleSubmit(e, data) {
+    e.preventDefault()
+    var toSubmit = {}
+    toSubmit.startingCity = this.state.origin[0]
+    var cityList = this.cleanDestinations()
+    toSubmit.cityList = cityList
+    toSubmit.startDate = this.state.date
+    console.log(toSubmit)
+  }
+  handleOrigin(e, data) {
+    this.setState({
+      origin: data.value
+    })
+  }
+  handleDays(e, data, key) {
+    var days = e.target.value
+    var d = this.state.destAndDays
+    d[key] = parseInt(days)
+    this.setState({
+      destAndDays: d
+    })
+    console.log(this.state.destAndDays)
   }
   render() {
     return (
-      <Form>
-        <Form.Field>
+      <Form onSubmit={(e, data) => this.handleSubmit(e, data)}>
+        <Form.Field name='origin'>
           <label>Origin</label>
-          <Dropdown placeholder='Select Airport' options={dropdownOptions} search selection button />
+          <Dropdown onChange={(e, data) => this.handleOrigin(e, data)} placeholder='Select Airport' options={dropdownOptions} search selection button />
         </Form.Field>
         <Form.Field>
           <label>Destinations</label>
-          <Dropdown placeholder='Select Airports' options={dropdownOptions} multiple search selection onChange={(e, data) => this.updateDestinationState(e, data)}/>
+          <Dropdown name='destinations' placeholder='Select Airports' options={dropdownOptions} multiple search selection onChange={(e, data) => this.updateDestinationState(e, data)}/>
         </Form.Field>
         {
           this.state.destinations.map((destination, index) => 
             (
-              <Form.Field key={destination[0]} inline>
+              <Form.Field name='destinationDays' key={destination[0]} inline>
                 <label>{destination[1]}</label>
-                <NumberPicker />
+                <Input placeholder='Days' onChange={(e, data, key) => this.handleDays(e, data, destination[0])}/>
               </Form.Field>
             )
           )
         }
-      </Form>
+        <Form.Field>
+          <label>Date</label>
+          <DateInput onChange={(e, data) => this.handleDate(e, data)} dateFormat={'MM-DD-YYYY'} value={this.state.date}/>
+        </Form.Field>
+        <Button type='submit'>Submit</Button>
+      </Form> 
 
     )
   }

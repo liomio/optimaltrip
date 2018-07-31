@@ -288,7 +288,7 @@ async function processInput(requestJSON) {
   return result;
 }
 
-router.get('/', function(req, res) {
+router.post('/', function(req, res) {
     processInput(requestJSON).then(function(result) {
         console.log(result);
       res.send(result);

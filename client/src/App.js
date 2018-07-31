@@ -11,7 +11,7 @@ class App extends Component {
         }
     }
     componentDidMount() {
-        fetch('/test').then(res => res.text()).then(json => this.setState({json}))
+      //fetch('/test').then(res => res.text()).then(json => this.setState({json}))
     }
     render() {
         return (
