@@ -1,4 +1,4 @@
-var flights = ['IAD', 'YYZ', 'LHR', 'CDG'];
+var flights = ['LAX', 'IAD', 'YYZ', 'LHR'];
 
 var targetSVG = "M9,0C4.029,0,0,4.029,0,9s4.029,9,9,9s9-4.029,9-9S13.971,0,9,0z M9,15.93 c-3.83,0-6.93-3.1-6.93-6.93S5.17,2.07,9,2.07s6.93,3.1,6.93,6.93S12.83,15.93,9,15.93 M12.5,9c0,1.933-1.567,3.5-3.5,3.5S5.5,10.933,5.5,9S7.067,5.5,9,5.5 S12.5,7.067,12.5,9z";
 
@@ -21,7 +21,7 @@ var images = [
     }, {
       "svgPath": planeSVG,
       "positionOnLine": 0,
-      "color": "#585869",
+      "color": "#232d4b",
       "animateAlongLine": true,
       "lineId": "line1",
       "flipDirection": false,
@@ -29,8 +29,12 @@ var images = [
       "scale": 0.03,
       "positionScale": 1.8
     } ];
+    
+var zoom = []
 
 $.getJSON('codes.json', function(result) {
+  zoom = result[flights[0]];
+
   for (var airports of flights) {
     var coords = result[airports];
     latitudes.push(coords[1]);
@@ -40,21 +44,21 @@ $.getJSON('codes.json', function(result) {
       "title" : airports,
       "latitude" : coords[1],
       "longitude" : coords[0],
-      "description" : "An airport"
     };
     images.push(city);
   }
 });
 
+console.log(zoom);
+
 var map = AmCharts.makeChart( "chartdiv", {
   "type": "map",
-  "theme": "none",
-
+  
   "dataProvider": {
     "map": "worldLow",
-    "zoomLevel": 3.5,
-    "zoomLongitude": -55,
-    "zoomLatitude": 42,
+    "zoomLevel": 1.5,
+    "zoomLongitude": 0,
+    "zoomLatitude": 20,
 
     "lines": [ {
       "id": "line1",
@@ -73,25 +77,21 @@ var map = AmCharts.makeChart( "chartdiv", {
   },
 
   "areasSettings": {
-    "unlistedAreasColor": "#8dd9ef"
+    "unlistedAreasColor": "#e57200"
   },
 
   "imagesSettings": {
-    "color": "#585869",
-    "rollOverColor": "#585869",
-    "selectedColor": "#585869",
+    "color": "#232d4b",
+    "rollOverColor": "#232d4b",
+    "selectedColor": "#232d4b",
     "pauseDuration": 0.2,
     "animationDuration": 2.5,
     "adjustAnimationSpeed": false
   },
 
   "linesSettings": {
-    "color": "#585869",
+    "color": "#232d4b",
     "alpha": 0.4
   },
-
-  "export": {
-    "enabled": true
-  }
-
+  
 } );
