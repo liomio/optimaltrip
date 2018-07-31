@@ -1,11 +1,11 @@
 import React, { Component } from 'react';
-import { Dropdown, Form, Container, Input, Button } from 'semantic-ui-react'
-import codes from './codes.json'
+import { Dropdown, Form, Input, Button } from 'semantic-ui-react'
+//import codes from './codes.json'
 import dropdownOptions from './dropdownOptions.json'
 // import Numberpicker from 'semantic-ui-react-numberpicker'
-import {
-  DateInput
-} from 'semantic-ui-calendar-react';
+import Client from './Client.js'
+import { DateInput } from 'semantic-ui-calendar-react'
+
 class MainForm extends Component {
   constructor(props) {
     super(props)
@@ -14,7 +14,8 @@ class MainForm extends Component {
       destinations: [],
       options: dropdownOptions,
       destAndDays: {},
-      date: ''
+      date: '',
+      result: {}
     }
   }
   componentDidMount() {
@@ -53,6 +54,12 @@ class MainForm extends Component {
     toSubmit.cityList = cityList
     toSubmit.startDate = this.state.date
     console.log(toSubmit)
+    Client.search(toSubmit, response => {
+      this.setState({
+        result: response
+      });
+      console.log(response);
+    });
   }
   handleOrigin(e, data) {
     this.setState({
@@ -62,7 +69,7 @@ class MainForm extends Component {
   handleDays(e, data, key) {
     var days = e.target.value
     var d = this.state.destAndDays
-    d[key] = parseInt(days)
+    d[key] = parseInt(days, 10)
     this.setState({
       destAndDays: d
     })
@@ -95,7 +102,6 @@ class MainForm extends Component {
         </Form.Field>
         <Button type='submit'>Submit</Button>
       </Form> 
-
     )
   }
 }
