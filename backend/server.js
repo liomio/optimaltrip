@@ -283,7 +283,7 @@ async function processInput(requestJSON) {
   }
    
   // check for no itinerary
-  if (cheapest == Number.MAX_SAFE_INTEGER) return "No itinerary exists!";
+  if (cheapest == Number.MAX_SAFE_INTEGER) return { error:"No itinerary exists!" };
   
   // match price with itinerary and return
   var result = {Path:itineraries[index], Price:Number(cheapest).toFixed(2)}
