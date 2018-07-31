@@ -3,6 +3,7 @@ import React, { Component } from 'react';
 //import './App.css';
 import { Container, Header } from 'semantic-ui-react'
 import MainForm from './MainForm.js'
+import Map from './map/Map.js'
 
 class App extends Component {
     constructor(props) {
@@ -21,6 +22,7 @@ class App extends Component {
                     { this.state.json }
                 </Container>
                 <MainForm />
+                <Map />
             </Container>
         );
     }
