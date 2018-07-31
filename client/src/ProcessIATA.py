@@ -19,9 +19,9 @@ with open('dropdownOptions.json', 'w') as out:
             location = airport['municipality']
             text = name + ' (' + code + ') - ' + location
             option = {}
-            option['key'] = text
+            option['key'] = code
             option['text'] = text
-            option['value'] = airport
+            option['value'] = (code, name)
             dropdown_options.append(option)
-    json.dump(dropdown_options, out, indent=2)
+    json.dump(dropdown_options, out, indent=2, ensure_ascii=False)
     
