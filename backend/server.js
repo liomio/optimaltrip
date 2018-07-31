@@ -233,6 +233,9 @@ async function processInput(requestJSON) {
   var cities = Object.keys(cityList);
   var startDate = new Date(requestJSON.startDate);
   
+  // add check for citylist
+  if (cityList.hasOwnProperty(startingCity)) delete cityList[startingCity];
+  
   // generate permutations
   var itineraries = [];
   permute(cities, 0, cities.length-1, itineraries, startingCity);
@@ -289,10 +292,10 @@ async function processInput(requestJSON) {
 }
 
 router.post('/', function(req, res) {
-    processInput(requestJSON).then(function(result) {
-        console.log(result);
-      res.send(result);
-    })
+  processInput(req.body).then(function(result) {
+    console.log(result);
+    res.send(result);
+  })
 })
 
 
