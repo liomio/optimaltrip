@@ -19,10 +19,10 @@ class MainForm extends Component {
     }
   }
   componentDidMount() {
-    console.log(this.state.options)
+    //console.log(this.state.options)
   }
   updateDestinationState(e, data) {
-    console.log(data)
+    //console.log(data)
 
     this.setState({
       destinations: data.value
@@ -40,7 +40,7 @@ class MainForm extends Component {
       var d = dests[i]
       var code = d[0]
       if(code in this.state.destAndDays) {
-        console.log(this.state.destAndDays[code])
+        //console.log(this.state.destAndDays[code])
         clean[code] = this.state.destAndDays[code]
       }
     }
@@ -58,6 +58,7 @@ class MainForm extends Component {
       this.setState({
         result: response
       });
+      this.props.sendData(response);
       console.log(response);
     });
   }
@@ -73,7 +74,7 @@ class MainForm extends Component {
     this.setState({
       destAndDays: d
     })
-    console.log(this.state.destAndDays)
+    //console.log(this.state.destAndDays)
   }
   render() {
     return (
@@ -94,15 +95,15 @@ class MainForm extends Component {
                 <Input placeholder='Days' onChange={(e, data, key) => this.handleDays(e, data, destination[0])}/>
               </Form.Field>
             )
-          )
+          )  
         }
         <Form.Field>
           <label>Date</label>
           <DateInput onChange={(e, data) => this.handleDate(e, data)} dateFormat={'MM-DD-YYYY'} value={this.state.date}/>
         </Form.Field>
         <Button type='submit'>Submit</Button>
-      </Form> 
-    )
+      </Form>
+    ) 
   }
 }
 
