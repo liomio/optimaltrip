@@ -6,7 +6,7 @@
         "@amcharts/amcharts3-react": "^3.0.0",
         "amcharts": "^3.14.5",
         "amcharts3": "^3.21.13",
-        "ammap3": "^3.21.13",
+        "ammap3": "github:amcharts/ammap3",
         "csv": "^3.1.0",
         "lodash": "^4.17.10",
         "prop-types": "^15.6.2",

@@ -3,7 +3,7 @@ import React, { Component } from 'react';
 //import './App.css';
 import { Container, Header } from 'semantic-ui-react'
 import MainForm from './MainForm.js'
-import Map from './map/testMap.js'
+import Map from './map/FlightMap.js'
 
 class App extends Component {
     constructor(props) {
@@ -26,6 +26,7 @@ class App extends Component {
                 </Container>
                 <MainForm sendData={this.getData}/>
                 { JSON.stringify(this.state) }
+                <Map />
             </Container>
         );
     }
