@@ -18,6 +18,7 @@ function createSession(origin, destination, date) {
     body: "country=US&currency=USD&locale=en-US&originPlace=" + origin + "&destinationPlace=" + destination + "&outboundDate=" + formattedDate + "&cabinClass=economy&adults=1"
   })
   .then(response => response.headers.get('location').split('/'))
+  .catch(error => error)
 }
 
 // skyscanner api poll session results
@@ -31,15 +32,17 @@ function pollSession(key, sortType) {
     }
   })
   .then(response => response)
+  .catch(error => error)
 }
 
 // skyscanner api update session results
 async function updateResults(key, sortType) {
   var ret = {}
 
-  // set max wait time to 20 polls
+  // set max wait time to 100 polls
   for (var i = 0; i < 100; i++) {
     var response = await pollSession(key, sortType)
+    if (!response) continue
 
     if (response.status == 304) {
       //console.log(response.status)
@@ -63,7 +66,17 @@ async function getFlightInfo(origin, destination, date, sortType) {
   var origin1 = origin.endsWith('-sky') ? origin : origin + '-sky'
   var destination1 = destination.endsWith('-sky') ? destination : destination + '-sky'
 
-  var sessionKey = await createSession(origin1, destination1, date)
+  var sessionKey = ''
+  // set max tries to 10
+  for (var i = 0; i < 10; i++) {
+    var response = await createSession(origin1, destination1, date)
+    if (!response) continue
+
+    sessionKey = response
+  }
+  
+  // if api cant get anything
+  if (sessionKey === '') return {}
   sessionKey = sessionKey[sessionKey.length-1]
   //console.log(sessionKey)
   var flightInfo = await updateResults(sessionKey, 'price')
@@ -102,7 +115,6 @@ async function calculateTripCost(itinerary, currMinCost, startDate, cityList, sa
 
     // check to see if flight already searched for
     var key = itinerary[i] + "_" + itinerary[i+1] + "_" + date.toString();
-    console.log("looking up " + key)
     var flightData = (key in savedFlights) ? savedFlights[key] : -1;
 
     // if api call is currently being made, push to cache hits
@@ -113,6 +125,7 @@ async function calculateTripCost(itinerary, currMinCost, startDate, cityList, sa
 
     // if not, call API
     if (flightData == -1) {
+      console.log("looking up " + key)
       // signal that api call is in progress
       savedFlights[key] = -2;
       flightData = await getFlightInfo(itinerary[i], itinerary[i+1], date, 'price');
@@ -122,7 +135,7 @@ async function calculateTripCost(itinerary, currMinCost, startDate, cityList, sa
     savedFlights[key] = flightData;
 
     // extract price
-    var price = flightData === {} ? Number.MAX_SAFE_INTEGER : flightData.Itineraries[0].PricingOptions[0].Price
+    var price = Object.keys(flightData).length == 0 ? Number.MAX_SAFE_INTEGER : flightData.Itineraries[0].PricingOptions[0].Price
 
     tripCost += price;
     console.log(itinerary[i] + "_" + itinerary[i+1] + ":" + Number(price).toFixed(2));
@@ -187,7 +200,17 @@ async function processInput(requestJSON) {
   var savedFlights = {};
   cityList[startingCity] = 0;
   //var result = await getOptimalPath(itineraries, startDate, cityList, savedFlights);
-  var prices = await checkItineraries(itineraries, startDate, cityList, savedFlights);
+  var prices = []
+  if (cities.length > 0) prices = await checkItineraries(itineraries, startDate, cityList, savedFlights);
+  // search in batches of 6
+  // need to work on if there are too many since api rejects too many concurrent requests
+  else {
+    for (var i = 0; i < itineraries.length; i+=6) {
+      batch = itineraries.slice(i, i+6)
+      var batchPrices = await checkItineraries(batch, startDate, cityList, savedFlights)
+      prices.push(...batchPrices)
+    }
+  }
   
   // extract min
   var cheapest = Number.MAX_SAFE_INTEGER;
@@ -202,11 +225,10 @@ async function processInput(requestJSON) {
  
         // get flight info from cached flight data
         for (var hit of cacheHits) {
-          var price = savedFlights[hit] === {} ? Number.MAX_SAFE_INTEGER : savedFlights[hit].Itineraries[0].PricingOptions[0].Price
+          var price = Object.keys(savedFlights[hit]).length == 0 ? Number.MAX_SAFE_INTEGER : savedFlights[hit].Itineraries[0].PricingOptions[0].Price
           tripCost += price;
           tripCost = Number(tripCost);
-          console.log(hit)
-          console.log(Number(price).toFixed(2));
+          console.log(hit + Number(price).toFixed(2));
           if (tripCost >= cheapest) break;
         }
 
