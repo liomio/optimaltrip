@@ -1,94 +1,87 @@
-// sample frontend JSON request
-var requestJSON = {
-  startingCity:"SIN",
-  cityList:{
-    "IAD":5
-  },
-  startDate:"12-24-2018"
-}
-
-var path = require('path')
-
-// Flight API authentication
-var Base64={_keyStr:"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=",encode:function(e){var t="";var n,r,i,s,o,u,a;var f=0;e=Base64._utf8_encode(e);while(f<e.length){n=e.charCodeAt(f++);r=e.charCodeAt(f++);i=e.charCodeAt(f++);s=n>>2;o=(n&3)<<4|r>>4;u=(r&15)<<2|i>>6;a=i&63;if(isNaN(r)){u=a=64}else if(isNaN(i)){a=64}t=t+this._keyStr.charAt(s)+this._keyStr.charAt(o)+this._keyStr.charAt(u)+this._keyStr.charAt(a)}return t},decode:function(e){var t="";var n,r,i;var s,o,u,a;var f=0;e=e.replace(/[^A-Za-z0-9+/=]/g,"");while(f<e.length){s=this._keyStr.indexOf(e.charAt(f++));o=this._keyStr.indexOf(e.charAt(f++));u=this._keyStr.indexOf(e.charAt(f++));a=this._keyStr.indexOf(e.charAt(f++));n=s<<2|o>>4;r=(o&15)<<4|u>>2;i=(u&3)<<6|a;t=t+String.fromCharCode(n);if(u!=64){t=t+String.fromCharCode(r)}if(a!=64){t=t+String.fromCharCode(i)}}t=Base64._utf8_decode(t);return t},_utf8_encode:function(e){e=e.replace(/rn/g,"n");var t="";for(var n=0;n<e.length;n++){var r=e.charCodeAt(n);if(r<128){t+=String.fromCharCode(r)}else if(r>127&&r<2048){t+=String.fromCharCode(r>>6|192);t+=String.fromCharCode(r&63|128)}else{t+=String.fromCharCode(r>>12|224);t+=String.fromCharCode(r>>6&63|128);t+=String.fromCharCode(r&63|128)}}return t},_utf8_decode:function(e){var t="";var n=0;var r=c1=c2=0;while(n<e.length){r=e.charCodeAt(n);if(r<128){t+=String.fromCharCode(r);n++}else if(r>191&&r<224){c2=e.charCodeAt(n+1);t+=String.fromCharCode((r&31)<<6|c2&63);n+=2}else{c2=e.charCodeAt(n+1);c3=e.charCodeAt(n+2);t+=String.fromCharCode((r&15)<<12|(c2&63)<<6|c3&63);n+=3}}return t}}
-
-username = 'chris.han98@gmail.com'
-password = '7782F561'
-creds = Base64.encode(username + ':' + password)
-
-var fetch = require('node-fetch')
-
 var express = require('express')
 var router = express.Router()
 var app = express()
 
-// TODO devise some type of index
-// returns weighted price that takes the duration into consideration
-function weightedCost(flight) {
-  return 0;
-}
+var fetch = require('node-fetch')
 
-// returns cheapest price JSON from FPLab Extreme Search Flight API
-function getFlightData(start, end, date) {
-  return fetch("https://api-dev.fareportallabs.com/air/api/search/searchflightavailability", {
+// skyscanner api create live search session
+function createSession(origin, destination, date) {
+  //console.log('creating live search session...')
+  var formattedDate = formatDate(date)
+  return fetch("https://skyscanner-skyscanner-flight-search-v1.p.mashape.com/apiservices/pricing/v1.0", {
     method: "POST",
     headers: {
-      "Authorization":"Basic " + creds,
-      "Content-Type":"application/json"
+      "Content-Type":"application/x-www-form-urlencoded",
+      "X-Mashape-Key":"rbUMaow3mzmshKQ0oY5Gh6NTZzt6p1cJgFLjsnAFTd2gEaaEpp",
+      "X-Mashape-Host":"skyscanner-skyscanner-flight-search-v1.p.mashape.com"
     },
-    body: JSON.stringify({
-      "ResponseVersion": "VERSION41",
-      "FlightSearchRequest": {
-        "Adults": "1",
-        "ClassOfService": "ECONOMY",
-        "TypeOfTrip": "ONEWAYTRIP",
-        "SegmentDetails": [
-          {
-            "DepartureDate": formatDate(date),
-            "DepartureTime": "1100",
-            "Destination": end,
-            "Origin": start
-          }
-        ]
-      }
-    })
-  }).then(res => res.json())
+    body: "country=US&currency=USD&locale=en-US&originPlace=" + origin + "&destinationPlace=" + destination + "&outboundDate=" + formattedDate + "&cabinClass=economy&adults=1"
+  })
+  .then(response => response.headers.get('location').split('/'))
+  .catch(error => error)
 }
 
-// parse JSON and return best flight
-function parseFlightData(json) {
-  // data contains the different flights sorted by flight id
-  var data = {};  
-  
-  // check if no flights
-  if (json.FlightResponse.FpSearch_AirLowFaresRS == null) return {flightId:'', flightPrice:Number.MAX_SAFE_INTEGER};
-  
-  // sort json data by flight id
-  var flightDetails = json.FlightResponse.FpSearch_AirLowFaresRS.OriginDestinationOptions.OutBoundOptions.OutBoundOption;
-  for (var obj of flightDetails) {
-    data[obj.Segmentid] = {SegmentDetails:obj.FlightSegment};
-  }
-  var priceAndDetails = json.FlightResponse.FpSearch_AirLowFaresRS.SegmentReference.RefDetails;
-  for (var obj of priceAndDetails) {
-    var id = obj.OutBoundOptionId[0];
-    var tempObj = data[id];
-    tempObj.randomDetails = obj.CNT;
-    tempObj.priceDetails = obj.PTC_FareBreakdown;
-    data[id] = tempObj;
-  }
-  
-  // go through data and return best flight
-  // will replace price with weightedPrice()
-  var bestFlight = {flightId:'', flightPrice:Number.MAX_SAFE_INTEGER};
-  for (var flight in data) {
-    var price = data[flight].priceDetails.Adult.TotalAdultFare;
-    if (price < bestFlight.flightPrice) {
-      bestFlight.flightId = flight;
-      bestFlight.flightPrice = price;
+// skyscanner api poll session results
+function pollSession(key, sortType) {
+  //console.log('polling...')
+  return fetch("https://skyscanner-skyscanner-flight-search-v1.p.mashape.com/apiservices/pricing/uk2/v1.0/" + key + "?sortType=" + sortType + "pageIndex=0&pageSize=1", {
+    method: "GET",
+    headers: {
+      "X-Mashape-Key":"rbUMaow3mzmshKQ0oY5Gh6NTZzt6p1cJgFLjsnAFTd2gEaaEpp",
+      "X-Mashape-Host":"skyscanner-skyscanner-flight-search-v1.p.mashape.com"
     }
+  })
+  .then(response => response)
+  .catch(error => error)
+}
+
+// skyscanner api update session results
+async function updateResults(key, sortType) {
+  var ret = {}
+
+  // set max wait time to 100 polls
+  for (var i = 0; i < 100; i++) {
+    var response = await pollSession(key, sortType)
+    if (!response) continue
+
+    if (response.status == 304) {
+      //console.log(response.status)
+      continue
+    }
+
+    var body = await response.json().then(body => body)
+    if (body.Status == 'UpdatesPending') {
+      //console.log(body.Status)
+      continue
+    }
+    
+    ret = body
+    break
+  }
+
+  return ret
+}
+
+async function getFlightInfo(origin, destination, date, sortType) {
+  var origin1 = origin.endsWith('-sky') ? origin : origin + '-sky'
+  var destination1 = destination.endsWith('-sky') ? destination : destination + '-sky'
+
+  var sessionKey = ''
+  // set max tries to 10
+  for (var i = 0; i < 10; i++) {
+    var response = await createSession(origin1, destination1, date)
+    if (!response) continue
+
+    sessionKey = response
   }
   
-  return bestFlight;
+  // if api cant get anything
+  if (sessionKey === '') return {}
+  sessionKey = sessionKey[sessionKey.length-1]
+  //console.log(sessionKey)
+  var flightInfo = await updateResults(sessionKey, 'price')
+  //console.log(flightInfo)
+  return flightInfo
 }
 
 // format date to YYYY-MM-DD
@@ -132,18 +125,25 @@ async function calculateTripCost(itinerary, currMinCost, startDate, cityList, sa
 
     // if not, call API
     if (flightData == -1) {
+      console.log("looking up " + key)
       // signal that api call is in progress
       savedFlights[key] = -2;
-      var apiData = await getFlightData(itinerary[i], itinerary[i+1], date);
-      flightData = await parseFlightData(apiData);
+      flightData = await getFlightInfo(itinerary[i], itinerary[i+1], date, 'price');
     }
 
     // save flight search
     savedFlights[key] = flightData;
 
-    tripCost += flightData.flightPrice;
-    console.log(key);
-    console.log(Number(tripCost).toFixed(2));
+    // extract price
+    var price = Number.MAX_SAFE_INTEGER
+    if (flightData.hasOwnProperty('Itineraries') && flightData.Itineraries.length > 0) {
+      if (flightData.Itineraries[0].hasOwnProperty('PricingOptions') && flightData.Itineraries[0].PricingOptions.length > 0) {
+        price = flightData.Itineraries[0].PricingOptions[0].Price
+      }
+    }
+
+    tripCost += price;
+    console.log(itinerary[i] + "_" + itinerary[i+1] + ":" + Number(price).toFixed(2));
     
     // stop if trip cost exceeds current trip cost
     if (tripCost >= currMinCost) return currMinCost;
@@ -177,26 +177,6 @@ function permute(list, l, r, permutationsList, startingCity) {
   }
 }
 
-// fisher-yates algorithm to shuffle array
-function shuffle(array) {
-  var currIndex = array.length, tempValue, randIndex;
-
-  // while there are elements to shuffle
-  while (0 !== currIndex) {
-
-    // pick remaining element
-    randIndex = Math.floor(Math.random() * currIndex);
-    currIndex -= 1;
-
-    // swap with current element
-    tempValue = array[currIndex];
-    array[currIndex] = array[randIndex];
-    array[randIndex] = tempValue;
-  }
-  
-  return array;
-}
-
 // run in parallel
 // compare itineraries
 async function checkItineraries(permutations, startDate, cityList, savedFlights) {
@@ -205,25 +185,6 @@ async function checkItineraries(permutations, startDate, cityList, savedFlights)
   await Promise.all(promises);
   
   return promises;
-}
-
-// use checkItinerary instead
-// get optimal path from itineraries
-async function getOptimalPath(permutations, startDate, cityList, savedFlights) {
-  // optimal path
-  var optimalPath = { "path":[], "price":Number.MAX_SAFE_INTEGER };
-  
-  // enumerate through itineraries
-  for (var itinerary of permutations) {
-    console.log(itinerary);
-    var thisTripCost = await calculateTripCost(itinerary, optimalPath["price"], startDate, cityList, savedFlights);
-    if (thisTripCost != optimalPath["price"]) {
-      optimalPath["path"] = itinerary;
-      optimalPath["price"] = thisTripCost;
-    }
-  }
-  
-  return optimalPath;
 }
 
 async function processInput(requestJSON) {
@@ -239,15 +200,22 @@ async function processInput(requestJSON) {
   // generate permutations
   var itineraries = [];
   permute(cities, 0, cities.length-1, itineraries, startingCity);
-  
-  // shuffle array to improve cache hits
-  itineraries = shuffle(itineraries);
 
   // get optimal path
   var savedFlights = {};
   cityList[startingCity] = 0;
   //var result = await getOptimalPath(itineraries, startDate, cityList, savedFlights);
-  var prices = await checkItineraries(itineraries, startDate, cityList, savedFlights);
+  var prices = []
+  if (cities.length > 0) prices = await checkItineraries(itineraries, startDate, cityList, savedFlights);
+  // search in batches of 6
+  // need to work on if there are too many since api rejects too many concurrent requests
+  else {
+    for (var i = 0; i < itineraries.length; i+=6) {
+      batch = itineraries.slice(i, i+6)
+      var batchPrices = await checkItineraries(batch, startDate, cityList, savedFlights)
+      prices.push(...batchPrices)
+    }
+  }
   
   // extract min
   var cheapest = Number.MAX_SAFE_INTEGER;
@@ -262,10 +230,15 @@ async function processInput(requestJSON) {
  
         // get flight info from cached flight data
         for (var hit of cacheHits) {
-          tripCost += savedFlights[hit].flightPrice;
+        var price = Number.MAX_SAFE_INTEGER
+          if (flightData.hasOwnProperty('Itineraries') && flightData.Itineraries.length > 0) {
+            if (flightData.Itineraries[0].hasOwnProperty('PricingOptions') && flightData.Itineraries[0].PricingOptions.length > 0) {
+              price = flightData.Itineraries[0].PricingOptions[0].Price
+            }
+          }
+          tripCost += price;
           tripCost = Number(tripCost);
-          console.log(hit)
-          console.log(Number(tripCost).toFixed(2));
+          console.log(hit + Number(price).toFixed(2));
           if (tripCost >= cheapest) break;
         }
 
@@ -293,10 +266,9 @@ async function processInput(requestJSON) {
 
 router.post('/', function(req, res) {
   processInput(req.body).then(function(result) {
-    console.log(result);
-    res.send(result);
+    console.log(result)
+    res.send(result)
   })
 })
 
-
-module.exports = router;
+module.exports = router
